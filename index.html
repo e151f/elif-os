@@ -9,7 +9,6 @@
 <title>ELIF OS //</title>
 <link rel="manifest" href="manifest.webmanifest?v=20260906">
 <link rel="stylesheet" href="styles.css?v=20260906">
-<link rel="stylesheet" href="calendar.css?v=20260906">
 <script src="boot.js?v=20260906"></script>
 <script src="config.js?v=20260906"></script>
 </head>
@@ -17,13 +16,5 @@
 <div id="app"></div>
 <div id="toast" class="toast"></div>
 <script src="app.js?v=20260906"></script>
-<script>
-setTimeout(function(){
-  var app=document.getElementById('app');
-  if(app && !app.innerHTML.trim()){
-    app.innerHTML='<div style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#090709;color:#f7edf2;font-family:system-ui"><div style="max-width:680px;width:100%;padding:24px;border:1px solid #543044;border-radius:16px;background:#130d12"><div style="color:#e48cae;font:11px monospace;letter-spacing:.15em">ELIF OS // STARTUP</div><h1 style="font-family:Georgia,serif">ELIF OS could not start.</h1><p style="color:#a796a1">The page loaded, but the application script did not render. This is a deployment/runtime issue, not your data.</p><button onclick="location.reload()" style="padding:10px 14px;border-radius:8px;border:1px solid #e48cae;background:#e48cae;color:#1c0e14;font-weight:700">Retry</button></div></div>';
-  }
-},1200);
-</script>
 </body>
 </html>
