@@ -5,7 +5,9 @@
     journal:'IMG_0955.jpeg',
     goals:'IMG_0956.jpeg',
     projects:'IMG_0957.jpeg',
-    sleep:'IMG_0958.jpeg'
+    sleep:'IMG_0958.jpeg',
+    hobbies:'IMG_0959.jpeg',
+    glow:'glow-up-dashboard-high-quality.jpeg'
   };
   function patch(){
     document.querySelectorAll('.tile[data-page]').forEach(tile=>{
