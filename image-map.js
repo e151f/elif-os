@@ -6,8 +6,8 @@
     goals:'IMG_0956.jpeg',
     projects:'IMG_0957.jpeg',
     sleep:'IMG_0958.jpeg',
-    hobbies:'IMG_0959.jpeg',
-    glow:'glow-up-dashboard-high-quality.jpeg'
+    hobbies:'hobbies.jpeg',
+    glow:'F584E7AC-3482-4B28-819F-8872E899B875.png'
   };
   function patch(){
     document.querySelectorAll('.tile[data-page]').forEach(tile=>{
