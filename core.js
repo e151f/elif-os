@@ -10,10 +10,11 @@
   };
   const asArray=(v)=>Array.isArray(v)?v:[];
   const asObject=(v)=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
-  const normalizeItem=(x)=>({...x,id:x?.id||uid()});
+  const normalizeItem=(x)=>({...asObject(x),id:x?.id||uid()});
   function normalize(raw){
     const s={...blank,...asObject(raw)};
-    ['tasks','habits','goals','projects','journal','studySessions','notes','calendarEvents','automations'].forEach(k=>s[k]=asArray(s[k]).map(normalizeItem));
+    ['tasks','habits','goals','projects','journal','studySessions','calendarEvents','automations'].forEach(k=>s[k]=asArray(s[k]).map(normalizeItem));
+    s.notes=asArray(s.notes).map(x=>typeof x==='string'?x:String(x?.text??''));
     ['habitLog','studyLog','water','sleep','movementLog','meals'].forEach(k=>s[k]=asObject(s[k]));
     s.wallet={balance:Number(s.wallet?.balance)||0,transactions:asArray(s.wallet?.transactions).map(normalizeItem)};
     s.tasks=s.tasks.map(x=>({status:'active',done:false,priority:'medium',projectId:null,goalId:null,...x}));
