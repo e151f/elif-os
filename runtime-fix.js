@@ -2,7 +2,7 @@
   const KEY='elif-os-v2-state';
   const load=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch{return null}};
   const save=s=>{localStorage.setItem(KEY,JSON.stringify(s));location.reload()};
-  const uid=()=>crypto.randomUUID();
+  const uid=()=>crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
   const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
   window.render=window.render||function(){location.reload()};
@@ -18,7 +18,10 @@
   const page=()=>document.querySelector('#view')?.dataset.page||'home';
 
   function addFor(p){
-    if(p==='tasks'||p==='home') return modal('New task',`<form data-runtime-form="task">${field('Title','title')}${field('Date','date','date',today())}<label class="field">Priority<select name="priority"><option>low</option><option selected>medium</option><option>high</option></select></label><div class="actions"><button class="primary">save</button></div></form>`);
+    // Tasks are owned exclusively by task-engine-v2. Never let the legacy
+    // runtime modal intercept the Tasks page, otherwise its save reloads Home.
+    if(p==='tasks') return;
+    if(p==='home') return modal('New task',`<form data-runtime-form="task">${field('Title','title')}${field('Date','date','date',today())}<label class="field">Priority<select name="priority"><option>low</option><option selected>medium</option><option>high</option></select></label><div class="actions"><button class="primary">save</button></div></form>`);
     if(p==='goals') return modal('New goal',`<form data-runtime-form="goal">${field('Goal','title')} ${field('Area','area','text','Personal')}<label class="field">Starting progress<input name="progress" type="number" min="0" max="100" value="0"></label><div class="actions"><button class="primary">save</button></div></form>`);
     if(p==='projects') return modal('New project',`<form data-runtime-form="project">${field('Project name','name')} ${field('Area','area','text','Personal')}<div class="actions"><button class="primary">save</button></div></form>`);
     if(p==='habits') return modal('New habit',`<form data-runtime-form="habit">${field('Habit','name')}<div class="actions"><button class="primary">save</button></div></form>`);
@@ -34,7 +37,11 @@
   document.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b)return;
     if(b.matches('[data-runtime-close]')){e.preventDefault();e.stopImmediatePropagation();document.querySelector('#modal')?.classList.remove('open');return}
-    if(b.hasAttribute('data-add')){e.preventDefault();e.stopImmediatePropagation();addFor(page());return}
+    if(b.hasAttribute('data-add')){
+      // task-engine-v2 owns Tasks and must receive the click itself.
+      if(page()==='tasks')return;
+      e.preventDefault();e.stopImmediatePropagation();addFor(page());return
+    }
     if(b.dataset.addProjectTask){
       e.preventDefault();e.stopImmediatePropagation();
       const pid=b.dataset.addProjectTask;
@@ -78,6 +85,5 @@
     out.innerHTML=rows.length?`<div class="list">${rows.slice(0,30).map(([k,v])=>`<div class="row"><div class="grow"><b>${esc(v)}</b><small>${k}</small></div></div>`).join('')}</div>`:'<div class="panel muted">No matches.</div>';
   });
 
-  // Calendar date buttons now open an event prefilled for that day.
   document.addEventListener('click',e=>{const b=e.target.closest('button[data-date]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();modal('New event',`<form data-runtime-form="event">${field('Title','title')}${field('Date','date','date',b.dataset.date)}${field('Start','start','time','18:00')}${field('End','end','time','19:00')}<div class="actions"><button class="primary">save</button></div></form>`)},true);
 })();
