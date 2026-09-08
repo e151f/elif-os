@@ -1,22 +1,188 @@
 (()=>{
-const KEY='elif-os-v2-state', core=()=>window.ELIFCore, pad=n=>String(n).padStart(2,'0');
-const today=()=>core()?.today?.()||(()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`})();
-const uid=()=>crypto.randomUUID(), read=()=>core()?.read?.()||JSON.parse(localStorage.getItem(KEY)||'{}'), write=s=>core()?.write?.(s)||localStorage.setItem(KEY,JSON.stringify(s));
-const active=x=>(x?.status||'active')==='active', esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-const ensure=s=>{s.tasks??=[];s.projects??=[];s.goals??=[];s.tasks.forEach(t=>{t.status??='active';t.done=!!t.done;t.priority??='medium';t.projectId??=null;t.goalId??=null;t.parentId??=null;t.recurrence??='none';t.createdAt??=new Date().toISOString();t.history??=[]});return s};
-const children=(s,id)=>s.tasks.filter(t=>t.parentId===id), history=(t,type,details='')=>(t.history??=[]).push({id:uid(),type,at:new Date().toISOString(),details});
-function nextDate(date,r){const d=new Date(`${date}T00:00:00`);if(r==='daily')d.setDate(d.getDate()+1);else if(r==='weekly')d.setDate(d.getDate()+7);else if(r==='monthly')d.setMonth(d.getMonth()+1);else return null;return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
-function recurring(s,t){const nd=nextDate(t.date,t.recurrence);if(!nd)return;const exists=s.tasks.some(x=>active(x)&&x.templateId===t.id&&x.date===nd);if(exists)return;const n={...t,id:uid(),date:nd,done:false,parentId:null,history:[],createdAt:new Date().toISOString(),completedAt:null,templateId:t.templateId||t.id};history(n,'created','recurring occurrence');s.tasks.push(n)}
-function toggle(id){const s=ensure(read()),t=s.tasks.find(x=>x.id===id);if(!t)return;t.done=!t.done;t.completedAt=t.done?new Date().toISOString():null;history(t,t.done?'completed':'reopened');if(t.done&&t.recurrence!=='none')recurring(s,t);write(s);location.hash='tasks';render(true)}
-function modal(title,body){const m=document.querySelector('#modal');if(!m)return;m.innerHTML=`<div class="modalbox task-modal"><button class="close" data-te-close>×</button><span class="eyebrow">TASK ENGINE</span><h2>${title}</h2>${body}</div>`;m.classList.add('open')}
-function opts(arr,name,label,current){return `<label class="field">${label}<select name="${name}"><option value="">— none —</option>${arr.filter(active).map(x=>`<option value="${x.id}" ${current===x.id?'selected':''}>${esc(x.title||x.name)}</option>`).join('')}</select></label>`}
-function form(t,parent=''){const s=read();return `<form data-te-form data-id="${t?.id||''}" data-parent="${parent||t?.parentId||''}"><label class="field">Task title<input name="title" value="${esc(t?.title||'')}" required></label><div class="te-grid"><label class="field">Due date<input name="date" type="date" value="${esc(t?.date||today())}" required></label><label class="field">Priority<select name="priority"><option value="low" ${t?.priority==='low'?'selected':''}>Low</option><option value="medium" ${!t||t?.priority==='medium'?'selected':''}>Medium</option><option value="high" ${t?.priority==='high'?'selected':''}>High</option></select></label></div>${opts(s.projects,'projectId','Project',t?.projectId)}${opts(s.goals,'goalId','Goal',t?.goalId)}<label class="field">Repeat<select name="recurrence"><option value="none">Does not repeat</option><option value="daily" ${t?.recurrence==='daily'?'selected':''}>Daily</option><option value="weekly" ${t?.recurrence==='weekly'?'selected':''}>Weekly</option><option value="monthly" ${t?.recurrence==='monthly'?'selected':''}>Monthly</option></select></label><label class="field">Notes<textarea name="notes">${esc(t?.notes||'')}</textarea></label><div class="actions"><button type="button" class="ghost" data-te-close>cancel</button><button class="primary">${t?'update':'create task'}</button></div></form>`}
-function saveForm(f){const s=ensure(read()),fd=new FormData(f),id=f.dataset.id,title=String(fd.get('title')||'').trim();if(!title)return;const data={title,date:fd.get('date')||today(),priority:fd.get('priority')||'medium',projectId:fd.get('projectId')||null,goalId:fd.get('goalId')||null,recurrence:fd.get('recurrence')||'none',notes:String(fd.get('notes')||'').trim()};if(id){const t=s.tasks.find(x=>x.id===id);if(!t)return;Object.assign(t,data);history(t,'edited')}else{const t={id:uid(),...data,done:false,status:'active',parentId:f.dataset.parent||null,history:[],createdAt:new Date().toISOString()};history(t,'created');s.tasks.push(t)}write(s);document.querySelector('#modal')?.classList.remove('open');render(true)}
-function row(t,s){const over=!t.done&&t.date&&t.date<today(),p=s.projects.find(x=>x.id===t.projectId),g=s.goals.find(x=>x.id===t.goalId),kids=children(s,t.id),prog=kids.length?`${kids.filter(x=>x.done).length}/${kids.length}`:'';return `<article class="te-task ${t.done?'is-done':''} ${over?'is-overdue':''}"><button class="te-check ${t.done?'checked':''}" data-te-toggle="${t.id}">${t.done?'✓':''}</button><div class="te-main"><div class="te-title">${esc(t.title)} ${t.recurrence!=='none'?`<small class="te-repeat">↻ ${t.recurrence}</small>`:''}</div><div class="te-meta"><span class="te-priority ${t.priority}">${t.priority}</span><span>${t.date||'No date'}</span>${over?'<b class="te-overdue">OVERDUE</b>':''}${p?`<span>↳ ${esc(p.name)}</span>`:''}${g?`<span>◎ ${esc(g.title)}</span>`:''}${prog?`<span>▰ ${prog}</span>`:''}</div>${kids.length?`<div class="te-subtasks">${kids.map(k=>`<button data-te-toggle="${k.id}" class="${k.done?'done':''}">${k.done?'✓':'□'} ${esc(k.title)}</button>`).join('')}</div>`:''}${t.notes?`<div class="te-notes">${esc(t.notes)}</div>`:''}</div><div class="te-actions"><button data-te-sub="${t.id}">+ subtask</button><button data-te-edit="${t.id}">edit</button><button data-te-delete="${t.id}">delete</button></div></article>`}
-function render(force=false){const v=document.querySelector('#view');if(!v||v.dataset.page!=='tasks')return;const host=v.querySelector('.data');if(!host)return;const s=ensure(read());if(!force&&host.querySelector('.te-v2'))return;const a=s.tasks.filter(active),o=a.filter(x=>!x.done),d=a.filter(x=>x.done),over=o.filter(x=>x.date&&x.date<today());host.innerHTML=`<div class="panel task-engine te-v2"><div class="te-summary"><div><span class="eyebrow">TASK ENGINE</span><h2>Execution queue</h2><p>${o.length} open · ${d.length} completed · ${over.length} overdue</p></div><button class="primary" data-te-new>＋ new task</button></div><div class="te-metrics"><span><b>${a.filter(x=>x.date===today()).length}</b> today</span><span><b>${over.length}</b> overdue</span><span><b>${o.filter(x=>x.priority==='high').length}</b> high priority</span><span><b>${d.length}</b> completed</span></div><div class="te-filters"><input id="te-search" placeholder="Search tasks..."><select id="te-filter"><option value="all">All tasks</option><option value="today">Today</option><option value="overdue">Overdue</option><option value="open">Open</option><option value="completed">Completed</option><option value="high">High priority</option></select><select id="te-sort"><option value="date">Due date</option><option value="priority">Priority</option><option value="created">Newest</option></select></div><div id="te-list">${a.map(t=>row(t,s)).join('')}</div></div>`;paint()}
-function paint(){const s=ensure(read()),box=document.querySelector('#te-list');if(!box)return;let a=s.tasks.filter(active),q=(document.querySelector('#te-search')?.value||'').toLowerCase().trim(),f=document.querySelector('#te-filter')?.value||'all',sort=document.querySelector('#te-sort')?.value||'date',td=today();a=a.filter(x=>(!q||`${x.title} ${x.notes||''} ${x.priority}`.toLowerCase().includes(q))&&(f==='all'||f==='today'&&x.date===td||f==='overdue'&&x.date&&x.date<td&&!x.done||f==='open'&&!x.done||f==='completed'&&x.done||f==='high'&&x.priority==='high'));const rank={high:0,medium:1,low:2};a.sort((x,y)=>sort==='priority'?rank[x.priority]-rank[y.priority]:sort==='created'?String(y.createdAt).localeCompare(String(x.createdAt)):String(x.date||'9999').localeCompare(String(y.date||'9999')));box.innerHTML=a.length?a.map(t=>row(t,s)).join(''):`<div class="te-empty"><b>No tasks in this view.</b><span>Try another filter or create a task.</span></div>`}
-document.addEventListener('click',e=>{const v=document.querySelector('#view');if(!v||v.dataset.page!=='tasks')return;const b=e.target.closest('button');if(!b)return;if(b.matches('[data-te-new]')){e.preventDefault();e.stopImmediatePropagation();modal('New task',form())}else if(b.dataset.te-edit){e.preventDefault();e.stopImmediatePropagation();const t=read().tasks.find(x=>x.id===b.dataset.teEdit);if(t)modal('Edit task',form(t))}else if(b.dataset.te-sub){e.preventDefault();e.stopImmediatePropagation();modal('New subtask',form(null,b.dataset.teSub))}else if(b.dataset.te-toggle){e.preventDefault();e.stopImmediatePropagation();toggle(b.dataset.teToggle)}else if(b.dataset.te-delete){e.preventDefault();e.stopImmediatePropagation();const s=ensure(read()),id=b.dataset.teDelete,i=s.tasks.findIndex(x=>x.id===id);if(i>=0&&confirm('Delete this task and its subtasks?')){s.tasks=s.tasks.filter(x=>x.id!==id&&x.parentId!==id);write(s);render(true)}}else if(b.matches('[data-te-close]')){e.preventDefault();e.stopImmediatePropagation();document.querySelector('#modal')?.classList.remove('open')}},true);
-document.addEventListener('submit',e=>{const f=e.target.closest('form[data-te-form]');if(!f)return;e.preventDefault();e.stopImmediatePropagation();saveForm(f)},true);
-document.addEventListener('input',e=>{if(e.target.id==='te-search')paint()});document.addEventListener('change',e=>{if(e.target.id==='te-filter'||e.target.id==='te-sort')paint()});
-const obs=new MutationObserver(()=>{if(document.querySelector('#view')?.dataset.page==='tasks')render()});obs.observe(document.body,{childList:true,subtree:true});setTimeout(render,100);
+  const KEY='elif-os-v2-state';
+  const core=()=>window.ELIFCore;
+  const pad=n=>String(n).padStart(2,'0');
+  const today=()=>core()?.today?.()||(()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`})();
+  const uid=()=>crypto.randomUUID();
+  const read=()=>core()?.read?.()||JSON.parse(localStorage.getItem(KEY)||'{}');
+  const write=s=>core()?.write?.(s)||localStorage.setItem(KEY,JSON.stringify(s));
+  const active=x=>(x?.status||'active')==='active';
+  const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+  const ensure=s=>{s.tasks??=[];s.projects??=[];s.goals??=[];s.tasks.forEach(t=>{t.status??='active';t.done=!!t.done;t.priority??='medium';t.projectId??=null;t.goalId??=null;t.parentId??=null;t.recurrence??='none';t.createdAt??=new Date().toISOString();t.history??=[]});return s};
+  const children=(s,id)=>s.tasks.filter(t=>t.parentId===id);
+  const addHistory=(t,type,details='')=>(t.history??=[]).push({id:uid(),type,at:new Date().toISOString(),details});
+  function nextDate(date,repeat){
+    const d=new Date(`${date}T00:00:00`);
+    if(repeat==='daily') d.setDate(d.getDate()+1);
+    else if(repeat==='weekly') d.setDate(d.getDate()+7);
+    else if(repeat==='monthly') d.setMonth(d.getMonth()+1);
+    else return null;
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function createOccurrence(s,t){
+    const nd=nextDate(t.date,t.recurrence);
+    if(!nd) return;
+    const template=t.templateId||t.id;
+    if(s.tasks.some(x=>active(x)&&x.templateId===template&&x.date===nd)) return;
+    const n={...t,id:uid(),date:nd,done:false,parentId:null,history:[],createdAt:new Date().toISOString(),completedAt:null,templateId:template};
+    addHistory(n,'created','recurring occurrence');
+    s.tasks.push(n);
+  }
+  function closeModal(){document.querySelector('#modal')?.classList.remove('open');}
+  function refresh(){
+    const view=document.querySelector('#view');
+    if(!view||view.dataset.page!=='tasks') return;
+    const search=document.querySelector('#te-search')?.value||'';
+    const filter=document.querySelector('#te-filter')?.value||'all';
+    const sort=document.querySelector('#te-sort')?.value||'date';
+    render(true);
+    const q=document.querySelector('#te-search');
+    const f=document.querySelector('#te-filter');
+    const so=document.querySelector('#te-sort');
+    if(q) q.value=search;
+    if(f) f.value=filter;
+    if(so) so.value=sort;
+    paint();
+  }
+  function openModal(title,body){
+    const m=document.querySelector('#modal');
+    if(!m) return;
+    m.innerHTML=`<div class="modalbox task-modal"><button class="close" data-te-close>×</button><span class="eyebrow">TASK ENGINE</span><h2>${title}</h2>${body}</div>`;
+    m.classList.add('open');
+  }
+  function options(items,name,label,current){
+    return `<label class="field">${label}<select name="${name}"><option value="">— none —</option>${items.filter(active).map(x=>`<option value="${x.id}" ${current===x.id?'selected':''}>${esc(x.title||x.name)}</option>`).join('')}</select></label>`;
+  }
+  function form(task,parentId=''){
+    const s=ensure(read());
+    return `<form data-te-form data-id="${task?.id||''}" data-parent="${parentId||task?.parentId||''}">
+      <label class="field">Task title<input name="title" value="${esc(task?.title||'')}" required autofocus></label>
+      <div class="te-grid">
+        <label class="field">Due date<input name="date" type="date" value="${esc(task?.date||today())}" required></label>
+        <label class="field">Priority<select name="priority">
+          <option value="low" ${task?.priority==='low'?'selected':''}>Low</option>
+          <option value="medium" ${!task||task?.priority==='medium'?'selected':''}>Medium</option>
+          <option value="high" ${task?.priority==='high'?'selected':''}>High</option>
+        </select></label>
+      </div>
+      ${options(s.projects,'projectId','Project',task?.projectId)}
+      ${options(s.goals,'goalId','Goal',task?.goalId)}
+      <label class="field">Repeat<select name="recurrence">
+        <option value="none">Does not repeat</option>
+        <option value="daily" ${task?.recurrence==='daily'?'selected':''}>Daily</option>
+        <option value="weekly" ${task?.recurrence==='weekly'?'selected':''}>Weekly</option>
+        <option value="monthly" ${task?.recurrence==='monthly'?'selected':''}>Monthly</option>
+      </select></label>
+      <label class="field">Notes<textarea name="notes">${esc(task?.notes||'')}</textarea></label>
+      <div class="actions"><button type="button" class="ghost" data-te-close>cancel</button><button class="primary">${task?'update':'create task'}</button></div>
+    </form>`;
+  }
+  function saveForm(formEl){
+    const s=ensure(read());
+    const fd=new FormData(formEl);
+    const title=String(fd.get('title')||'').trim();
+    if(!title) return;
+    const id=formEl.dataset.id||'';
+    const data={title,date:String(fd.get('date')||today()),priority:String(fd.get('priority')||'medium'),projectId:String(fd.get('projectId')||'')||null,goalId:String(fd.get('goalId')||'')||null,recurrence:String(fd.get('recurrence')||'none'),notes:String(fd.get('notes')||'').trim()};
+    if(id){
+      const task=s.tasks.find(x=>x.id===id);
+      if(!task) return;
+      Object.assign(task,data);
+      addHistory(task,'edited');
+    }else{
+      const task={id:uid(),...data,done:false,status:'active',parentId:formEl.dataset.parent||null,history:[],createdAt:new Date().toISOString()};
+      addHistory(task,'created');
+      s.tasks.push(task);
+    }
+    write(s);
+    closeModal();
+    refresh();
+  }
+  function taskRow(task,s){
+    const overdue=!task.done&&task.date&&task.date<today();
+    const project=s.projects.find(x=>x.id===task.projectId);
+    const goal=s.goals.find(x=>x.id===task.goalId);
+    const kids=children(s,task.id);
+    const progress=kids.length?`${kids.filter(x=>x.done).length}/${kids.length}`:'';
+    return `<article class="te-task ${task.done?'is-done':''} ${overdue?'is-overdue':''}">
+      <button class="te-check ${task.done?'checked':''}" data-te-toggle="${task.id}" aria-label="${task.done?'Reopen task':'Complete task'}">${task.done?'✓':''}</button>
+      <div class="te-main">
+        <div class="te-title">${esc(task.title)}${task.recurrence!=='none'?` <small class="te-repeat">↻ ${task.recurrence}</small>`:''}</div>
+        <div class="te-meta"><span class="te-priority ${task.priority}">${task.priority}</span><span>${task.date||'No date'}</span>${overdue?'<b class="te-overdue">OVERDUE</b>':''}${project?`<span>↳ ${esc(project.name)}</span>`:''}${goal?`<span>◎ ${esc(goal.title)}</span>`:''}${progress?`<span>▰ ${progress}</span>`:''}</div>
+        ${kids.length?`<div class="te-subtasks">${kids.map(k=>`<button data-te-toggle="${k.id}" class="${k.done?'done':''}">${k.done?'✓':'□'} ${esc(k.title)}</button>`).join('')}</div>`:''}
+        ${task.notes?`<div class="te-notes">${esc(task.notes)}</div>`:''}
+      </div>
+      <div class="te-actions"><button data-te-sub="${task.id}">+ subtask</button><button data-te-edit="${task.id}">edit</button><button data-te-delete="${task.id}">delete</button></div>
+    </article>`;
+  }
+  function render(force=false){
+    const view=document.querySelector('#view');
+    if(!view||view.dataset.page!=='tasks') return;
+    const host=view.querySelector('.data');
+    if(!host) return;
+    if(!force&&host.querySelector('.te-v2')) return;
+    const s=ensure(read());
+    const tasks=s.tasks.filter(active);
+    const open=tasks.filter(x=>!x.done);
+    const done=tasks.filter(x=>x.done);
+    const overdue=open.filter(x=>x.date&&x.date<today());
+    host.innerHTML=`<div class="panel task-engine te-v2">
+      <div class="te-summary"><div><span class="eyebrow">TASK ENGINE</span><h2>Execution queue</h2><p>${open.length} open · ${done.length} completed · ${overdue.length} overdue</p></div><button class="primary" data-te-new>＋ new task</button></div>
+      <div class="te-metrics"><span><b>${tasks.filter(x=>x.date===today()).length}</b> today</span><span><b>${overdue.length}</b> overdue</span><span><b>${open.filter(x=>x.priority==='high').length}</b> high priority</span><span><b>${done.length}</b> completed</span></div>
+      <div class="te-filters"><input id="te-search" placeholder="Search tasks..." aria-label="Search tasks"><select id="te-filter"><option value="all">All tasks</option><option value="today">Today</option><option value="overdue">Overdue</option><option value="open">Open</option><option value="completed">Completed</option><option value="high">High priority</option></select><select id="te-sort"><option value="date">Due date</option><option value="priority">Priority</option><option value="created">Newest</option></select></div>
+      <div id="te-list"></div>
+    </div>`;
+    paint();
+  }
+  function paint(){
+    const box=document.querySelector('#te-list');
+    if(!box) return;
+    const s=ensure(read());
+    let tasks=s.tasks.filter(active);
+    const q=(document.querySelector('#te-search')?.value||'').trim().toLowerCase();
+    const filter=document.querySelector('#te-filter')?.value||'all';
+    const sort=document.querySelector('#te-sort')?.value||'date';
+    const td=today();
+    tasks=tasks.filter(x=>{
+      if(q&&!`${x.title} ${x.notes||''} ${x.priority}`.toLowerCase().includes(q)) return false;
+      if(filter==='today') return x.date===td;
+      if(filter==='overdue') return !!(x.date&&x.date<td&&!x.done);
+      if(filter==='open') return !x.done;
+      if(filter==='completed') return !!x.done;
+      if(filter==='high') return x.priority==='high';
+      return true;
+    });
+    const rank={high:0,medium:1,low:2};
+    tasks.sort((a,b)=>sort==='priority'?rank[a.priority]-rank[b.priority]:sort==='created'?String(b.createdAt||'').localeCompare(String(a.createdAt||'')):String(a.date||'9999').localeCompare(String(b.date||'9999')));
+    box.innerHTML=tasks.length?tasks.map(x=>taskRow(x,s)).join(''):`<div class="te-empty"><b>No tasks in this view.</b><span>Try another filter or create a task.</span></div>`;
+  }
+  document.addEventListener('click',e=>{
+    const view=document.querySelector('#view');
+    if(!view||view.dataset.page!=='tasks') return;
+    const button=e.target.closest('button');
+    if(!button) return;
+    if(button.matches('[data-te-new]')){
+      e.preventDefault();e.stopImmediatePropagation();openModal('New task',form());
+    }else if(button.dataset.teEdit){
+      e.preventDefault();e.stopImmediatePropagation();const t=read().tasks.find(x=>x.id===button.dataset.teEdit);if(t)openModal('Edit task',form(t));
+    }else if(button.dataset.teSub){
+      e.preventDefault();e.stopImmediatePropagation();openModal('New subtask',form(null,button.dataset.teSub));
+    }else if(button.dataset.teToggle){
+      e.preventDefault();e.stopImmediatePropagation();const s=ensure(read());const t=s.tasks.find(x=>x.id===button.dataset.teToggle);if(t){t.done=!t.done;t.completedAt=t.done?new Date().toISOString():null;addHistory(t,t.done?'completed':'reopened');if(t.done&&t.recurrence!=='none')createOccurrence(s,t);write(s);refresh();}
+    }else if(button.dataset.teDelete){
+      e.preventDefault();e.stopImmediatePropagation();const s=ensure(read());const id=button.dataset.teDelete;if(confirm('Delete this task and its subtasks?')){s.tasks=s.tasks.filter(x=>x.id!==id&&x.parentId!==id);write(s);refresh();}
+    }else if(button.matches('[data-te-close]')){
+      e.preventDefault();e.stopImmediatePropagation();closeModal();
+    }
+  },true);
+  document.addEventListener('submit',e=>{
+    const formEl=e.target.closest('form[data-te-form]');
+    if(!formEl) return;
+    e.preventDefault();e.stopImmediatePropagation();saveForm(formEl);
+  },true);
+  document.addEventListener('input',e=>{if(e.target.id==='te-search') paint();});
+  document.addEventListener('change',e=>{if(e.target.id==='te-filter'||e.target.id==='te-sort') paint();});
+  const observer=new MutationObserver(()=>{if(document.querySelector('#view')?.dataset.page==='tasks') render();});
+  observer.observe(document.body,{childList:true,subtree:true});
+  setTimeout(render,100);
 })();
