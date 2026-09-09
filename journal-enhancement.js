@@ -1,15 +1,87 @@
-(()=>{try{
-const KEY='elif-os-journal-v1';
-const root=()=>document.querySelector('#view');
-const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-const read=()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'{}');return {entries:Array.isArray(s.entries)?s.entries:[]}}catch{return {entries:[]}}};
-const write=s=>localStorage.setItem(KEY,JSON.stringify(s));
-const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-const prompts=['What made today better than yesterday?','What are you avoiding right now, and why?','What are three things you are grateful for today?','What would make tomorrow a genuinely good day?','What did you learn about yourself today?','If you could give your future self one sentence, what would it be?','What is taking up the most space in your mind right now?','What is one thing you want to stop, start, and continue?'];
-function render(){const v=root();if(!v)return;const s=read(),entries=s.entries,d=today();v.dataset.page='journal';v.innerHTML=`<section><div class="viewhead"><div><h1>Journal</h1><p>A private place to think clearly, process the day, and keep your thoughts.</p></div><span class="tag">${entries.length} ENTRIES</span></div><div class="enh-grid"><div class="panel enh-card"><span class="tag">NEW ENTRY</span><h3>Write it out</h3><form data-journal-form><div class="enh-grid"><div class="enh-field"><label>Date</label><input class="enh-input" name="date" type="date" value="${d}" required></div><div class="enh-field"><label>Mood</label><select class="enh-select" name="mood"><option>Calm</option><option>Happy</option><option>Focused</option><option>Excited</option><option>Neutral</option><option>Low</option><option>Overwhelmed</option></select></div></div><div class="enh-field"><label>Title</label><input class="enh-input" name="title" placeholder="What is on your mind?" required></div><div class="enh-field"><label>Entry</label><textarea class="enh-textarea journal-area" name="body" placeholder="Write freely..." required></textarea></div><div class="enh-row"><button class="primary" type="submit">save entry</button><button class="ghost" type="button" data-journal-prompt>give me a prompt</button></div><div class="journal-prompt" data-prompt aria-live="polite">Need an idea? Click the button for a writing prompt.</div></form></div><div class="panel enh-card"><span class="tag">RECENT</span><h3>Your thoughts</h3>${entries.slice(0,8).map((e,i)=>`<article class="journal-entry"><div class="enh-row"><b>${esc(e.title)}</b><span class="tag">${esc(e.mood)}</span></div><small>${esc(e.date)}</small><p>${esc(e.body).replace(/\n/g,'<br>')}</p><button type="button" class="ghost" data-journal-remove="${i}">delete</button></article>`).join('')||'<div class="empty-state">Your journal is empty. Start with whatever is on your mind.</div>'}</div></div></section>`}
-function givePrompt(btn){const form=btn.closest('[data-journal-form]');if(!form)return;const prompt=prompts[Math.floor(Math.random()*prompts.length)],box=form.querySelector('[data-prompt]'),area=form.querySelector('textarea[name="body"]');if(box)box.textContent=prompt;if(area){const current=area.value.trim();if(!current){area.value=prompt+'\n\n';}else if(!current.includes(prompt)){area.value=current+'\n\n'+prompt+'\n\n';}area.focus();area.setSelectionRange(area.value.length,area.value.length)}}
-document.addEventListener('submit',e=>{const f=e.target.closest('[data-journal-form]');if(!f)return;e.preventDefault();const fd=new FormData(f),s=read();s.entries.unshift({id:Date.now(),date:fd.get('date'),mood:fd.get('mood'),title:fd.get('title'),body:fd.get('body')});write(s);render();});
-document.addEventListener('click',e=>{const p=e.target.closest('[data-journal-prompt]');if(p){e.preventDefault();e.stopPropagation();givePrompt(p);return}const r=e.target.closest('[data-journal-remove]');if(r){const s=read();s.entries.splice(Number(r.dataset.journalRemove),1);write(s);render();return}});
-window.addEventListener('click',e=>{const b=e.target.closest('[data-page="journal"]');if(!b)return;setTimeout(render,0)});
-window.ELIFJournalEnhancement={render,givePrompt};
-}catch(e){console.warn('ELIF Journal enhancement disabled',e)}})();
+(()=>{
+  const KEY='elif-os-journal-v2';
+  const root=()=>document.querySelector('#view');
+  const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+  const read=()=>{try{const s=JSON.parse(localStorage.getItem(KEY)||'{}');return {entries:Array.isArray(s.entries)?s.entries:[]}}catch{return {entries:[]}}};
+  const write=s=>localStorage.setItem(KEY,JSON.stringify(s));
+  const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+  const prompts=[
+    'What made today better than yesterday?',
+    'What are you avoiding right now, and why?',
+    'What are three things you are grateful for today?',
+    'What would make tomorrow a genuinely good day?',
+    'What did you learn about yourself today?',
+    'If you could give your future self one sentence, what would it be?',
+    'What is taking up the most space in your mind right now?',
+    'What is one thing you want to stop, start, and continue?'
+  ];
+
+  function render(){
+    const v=root(); if(!v)return;
+    const entries=read().entries;
+    const d=today();
+    v.dataset.page='journal';
+    v.innerHTML=`<section class="journal-page">
+      <div class="viewhead"><div><h1>Journal</h1><p>A private place to think clearly, process the day, and keep your thoughts.</p></div><span class="tag">${entries.length} ENTRIES</span></div>
+      <div class="enh-grid">
+        <div class="panel enh-card">
+          <span class="tag">NEW ENTRY</span><h3>Write it out</h3>
+          <form data-journal-form autocomplete="off">
+            <div class="enh-grid">
+              <div class="enh-field"><label>Date</label><input class="enh-input" name="date" type="date" value="${d}" required></div>
+              <div class="enh-field"><label>Mood</label><select class="enh-select" name="mood"><option>Calm</option><option>Happy</option><option>Focused</option><option>Excited</option><option>Neutral</option><option>Low</option><option>Overwhelmed</option></select></div>
+            </div>
+            <div class="enh-field"><label>Title</label><input class="enh-input" name="title" placeholder="What is on your mind?" required></div>
+            <div class="enh-field"><label>Entry</label><textarea class="enh-textarea journal-area" name="body" placeholder="Write freely..." required></textarea></div>
+            <div class="enh-row"><button class="primary" type="submit">save entry</button><button class="ghost" type="button" data-journal-prompt>give me a prompt</button></div>
+            <div class="journal-prompt" data-prompt aria-live="polite">Need an idea? Click the button for a writing prompt.</div>
+          </form>
+        </div>
+        <div class="panel enh-card"><span class="tag">RECENT</span><h3>Your thoughts</h3>
+          ${entries.slice(0,8).map((e,i)=>`<article class="journal-entry"><div class="enh-row"><b>${esc(e.title)}</b><span class="tag">${esc(e.mood)}</span></div><small>${esc(e.date)}</small><p>${esc(e.body).replace(/\n/g,'<br>')}</p><button type="button" class="ghost" data-journal-remove="${i}">delete</button></article>`).join('')||'<div class="empty-state">Your journal is empty. Start with whatever is on your mind.</div>'}
+        </div>
+      </div>
+    </section>`;
+  }
+
+  function prompt(btn){
+    const form=btn.closest('[data-journal-form]'); if(!form)return;
+    const area=form.elements.body;
+    const box=form.querySelector('[data-prompt]');
+    const p=prompts[Math.floor(Math.random()*prompts.length)];
+    if(box)box.textContent=p;
+    if(area){
+      const current=area.value;
+      area.value=current ? `${current.replace(/\s*$/,'')}\n\n${p}\n\n` : `${p}\n\n`;
+      area.focus();
+      area.selectionStart=area.selectionEnd=area.value.length;
+      area.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  }
+
+  document.addEventListener('click',e=>{
+    const p=e.target.closest('[data-journal-prompt]');
+    if(p){e.preventDefault();e.stopPropagation();prompt(p);return;}
+    const r=e.target.closest('[data-journal-remove]');
+    if(r){e.preventDefault();e.stopPropagation();const s=read();s.entries.splice(Number(r.dataset.journalRemove),1);write(s);render();return;}
+  },true);
+
+  document.addEventListener('submit',e=>{
+    const f=e.target.closest('[data-journal-form]'); if(!f)return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    const body=String(f.elements.body?.value||'').trim();
+    const title=String(f.elements.title?.value||'').trim();
+    if(!title||!body){f.reportValidity?.();return;}
+    const s=read();
+    s.entries.unshift({id:Date.now(),date:f.elements.date.value||today(),mood:f.elements.mood.value||'Neutral',title,body});
+    write(s);
+    render();
+  },true);
+
+  window.addEventListener('click',e=>{
+    const b=e.target.closest('[data-page="journal"]');
+    if(b)setTimeout(render,0);
+  });
+
+  window.ELIFJournalEnhancement={render,prompt};
+})();
