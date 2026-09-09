@@ -1,11 +1,11 @@
 (()=>{
-  const KEY='elif-os-memory-v1', APP='elif-os-v2-state';
+  const APP='elif-os-v2-state';
   const root=()=>document.querySelector('#view');
   const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
   const uid=()=>crypto.randomUUID();
-  const read=()=>{try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[]}catch{return[]}};
-  const write=x=>localStorage.setItem(KEY,JSON.stringify(x));
-  const app=()=>{try{return JSON.parse(localStorage.getItem(APP)||'{}')}catch{return{}}};
+  const app=()=>window.ELIFCore?.read?.()||(()=>{try{return JSON.parse(localStorage.getItem(APP)||'{}')}catch{return{}}})();
+  const read=()=>{const s=app();return Array.isArray(s.memory)?s.memory:[]};
+  const write=x=>{const s=app();s.memory=x;if(window.ELIFCore?.write)window.ELIFCore.write(s);else localStorage.setItem(APP,JSON.stringify(s))};
   let query='';
   let editing=null;
   const typeLabel={insight:'Insight',idea:'Idea',decision:'Decision',fact:'Fact',resource:'Resource',principle:'Principle'};
@@ -18,10 +18,7 @@
     return out;
   }
   function matches(m){if(!query)return true;const q=query.toLowerCase();return [m.title,m.body,m.type,(m.tags||[]).join(' '),m.source].join(' ').toLowerCase().includes(q)}
-  function related(m,items){
-    const tags=new Set((m.tags||[]).map(x=>x.toLowerCase()));
-    return items.filter(x=>x.id!==m.id&&((x.tags||[]).some(t=>tags.has(t.toLowerCase()))||((m.links||[]).includes(x.id)))).slice(0,5);
-  }
+  function related(m,items){const tags=new Set((m.tags||[]).map(x=>x.toLowerCase()));return items.filter(x=>x.id!==m.id&&((x.tags||[]).some(t=>tags.has(t.toLowerCase()))||((m.links||[]).includes(x.id)))).slice(0,5)}
   function backlinks(m,items){return items.filter(x=>(x.links||[]).includes(m.id)).slice(0,5)}
   function render(){
     const v=root();if(!v||v.dataset.page!=='memory')return;
