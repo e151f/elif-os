@@ -5,25 +5,34 @@
   const read=()=>{try{return JSON.parse(localStorage.getItem(APP)||'{}')}catch{return {}}};
   const write=s=>localStorage.setItem(APP,JSON.stringify(s));
   const durations={focus:25*60,short:5*60,long:15*60,focus50:50*60};
-  let mode='focus',seconds=durations.focus,running=false,timer=null,startedAt=null,sessionId=null;
+  let mode='focus',seconds=durations.focus,running=false,timer=null,startedAt=null,sessionId=null,plannedEndAt=null;
   const fmt=n=>`${String(Math.floor(Math.max(0,n)/60)).padStart(2,'0')}:${String(Math.max(0,n)%60).padStart(2,'0')}`;
   const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+  function elapsedSeconds(){return startedAt?Math.max(0,(Date.now()-new Date(startedAt).getTime())/1000):0}
   function finishSession(completed=false){
     if(!startedAt)return;
     const s=read();s.studySessions=Array.isArray(s.studySessions)?s.studySessions:[];
     const end=new Date(),mins=Math.max(0,Math.round((end-new Date(startedAt))/60000));
-    if(mins>0)s.studySessions.push({id:sessionId||Date.now(),date:startedAt.slice(0,10),start:startedAt,end:end.toISOString(),minutes:mins,mode});
+    const activePlan=(()=>{try{return JSON.parse(localStorage.getItem('elif-os-active-study-plan')||'null')}catch{return null}})();
+    if(mins>0)s.studySessions.push({id:sessionId||Date.now(),date:startedAt.slice(0,10),start:startedAt,end:end.toISOString(),minutes:mins,mode,...(activePlan?{planId:activePlan.id,title:activePlan.title,subject:activePlan.subject}:{} )});
     if(completed&&mode!=='short'&&mode!=='long'){
       s.studyLog=s.studyLog||{};s.studyLog[day()]=Number(s.studyLog[day()]||0)+Math.round(durations[mode]/60);
     }
-    write(s);startedAt=null;sessionId=null;
+    write(s);startedAt=null;sessionId=null;plannedEndAt=null;
+    try{localStorage.removeItem('elif-os-active-study-plan')}catch{}
   }
   function stop(saveSession=true){if(timer){clearInterval(timer);timer=null}if(saveSession)finishSession(false);running=false;paint()}
   function complete(){if(timer){clearInterval(timer);timer=null}finishSession(true);running=false;seconds=durations[mode];paint();renderStats()}
-  function tick(){if(!running)return;seconds=Math.max(0,seconds-1);if(seconds===0){complete();return}paint()}
+  function tick(){
+    if(!running)return;
+    const remaining=Math.max(0,plannedEndAt-Date.now())/1000;
+    seconds=Math.ceil(remaining);
+    if(seconds<=0){complete();return}
+    paint();
+  }
   function start(){
     if(running)return;
-    running=true;startedAt=new Date().toISOString();sessionId=Date.now();
+    running=true;startedAt=new Date().toISOString();sessionId=Date.now();plannedEndAt=Date.now()+durations[mode]*1000;
     if(timer)clearInterval(timer);timer=setInterval(tick,1000);paint();
   }
   function setMode(next){if(!durations[next])return;if(running)stop(true);mode=next;seconds=durations[next];paint()}
@@ -72,5 +81,7 @@
     setMode(b.dataset.elifPomoMode);
   },true);
   window.addEventListener('click',e=>{const b=e.target.closest?.('button[data-page="study"]');if(b)setTimeout(render,0)});
+  window.addEventListener('pageshow',()=>{if(running)tick()});
+  document.addEventListener('visibilitychange',()=>{if(running)tick()});
   window.ELIFStudyEnhancement={render,start,stop,reset,setMode};
 })();
