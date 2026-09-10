@@ -1,0 +1,69 @@
+(()=>{
+  const APP='elif-os-v2-state';
+  const read=()=>{try{return JSON.parse(localStorage.getItem(APP)||'{}')}catch{return {}}};
+  const write=s=>localStorage.setItem(APP,JSON.stringify(s));
+  const root=()=>document.querySelector('#view');
+  const pad=n=>String(n).padStart(2,'0');
+  const key=d=>{const x=new Date(d);return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`};
+  const SUBJECTS={analytical:['🧪','Analytical'],micro:['🦠','Microbiology'],anatomy:['🫀','Anatomy'],biochem:['🧬','Biochemistry'],pharmacy:['💊','Pharmacy Practice'],public:['🌍','Public Health'],ai:['🤖','AI Awareness'],history:['🇹🇷','Atatürk']};
+  const P=(date,start,end,subject,title)=>({id:`${date}-${start}-${subject}`,date,start,end,subject,title});
+  const plans=[];
+  const add=(date,arr)=>arr.forEach(x=>plans.push(P(date,...x)));
+  add('2026-09-10',[['22:15','23:00','analytical','Pre-study: course map + analytical methods'],['23:15','00:00','micro','Pre-study: microorganisms overview']]);
+  add('2026-09-11',[['00:15','00:50','biochem','Pre-study: water, pH and course map'],['01:05','01:35','anatomy','Pre-study: anatomy terminology + systems map']]);
+  const weeks={
+    '2026-09-22':[['10:30','11:15','pharmacy','Pharmacy Practice: Introduction — active recall'],['18:00','18:45','micro','Microbiology: Introduction + prokaryote/eukaryote preview']],
+    '2026-09-23':[['13:15','14:00','analytical','Analytical: Introduction — concept map + 5 recall questions'],['18:00','18:40','biochem','Biochemistry: Introduction & Water — retrieval practice']],
+    '2026-09-24':[['17:15','18:00','analytical','Analytical: same-day recall + lab concepts'],['18:15','18:45','public','Public Health: course overview + key concepts']],
+    '2026-09-25':[['13:30','14:15','anatomy','Anatomy: terminology — draw/label from memory'],['17:30','18:00','ai','AI Awareness: What is AI? — recall']],
+    '2026-09-26':[['11:00','12:00','analytical','Analytical: Week 1 retrieval + questions'],['13:00','14:00','micro','Microbiology: Week 1 retrieval'],['15:00','15:45','biochem','Biochemistry: Week 1 retrieval'],['16:00','16:45','anatomy','Anatomy: Week 1 retrieval']],
+    '2026-09-27':[['12:00','12:30','history','Atatürk: Week 1 recall'],['12:45','13:15','pharmacy','Pharmacy Practice: Week 1 recall'],['13:30','14:00','public','Public Health: Week 1 recall']],
+    '2026-09-29':[['10:30','11:00','pharmacy','Pharmacy Practice: Basic Definitions — recall'],['18:00','18:45','micro','Microbiology: Prokaryotic/Eukaryotic microorganisms']],
+    '2026-09-30':[['13:15','14:00','analytical','Analytical: Spectrochemical methods'],['18:00','18:45','biochem','Biochemistry: Ionization of water, weak acids/bases']],
+    '2026-10-01':[['17:15','18:00','analytical','Analytical: Spectrochemical methods — retrieval'],['18:15','18:45','public','Public Health: Introduction to Public Health']],
+    '2026-10-02':[['13:30','14:15','anatomy','Anatomy: Thorax, abdomen, pelvis'],['17:30','18:00','ai','AI Awareness: How AI works in practice']],
+    '2026-10-03':[['11:00','12:00','analytical','Analytical: Week 2 questions'],['13:00','14:00','micro','Microbiology: Prokaryotic vs eukaryotic recall'],['15:00','15:45','biochem','Biochemistry: acid/base recall + questions'],['16:00','16:45','anatomy','Anatomy: thorax/abdomen/pelvis recall']],
+    '2026-10-04':[['12:00','12:30','history','Atatürk: Week 2 recall'],['12:45','13:15','pharmacy','Pharmacy Practice: Basic Definitions recall'],['13:30','14:00','public','Public Health: Week 2 recall']],
+    '2026-10-06':[['10:30','11:00','pharmacy','Pharmacy Practice: Prescription & parts'],['18:00','18:45','micro','Microbiology: Bacteria — structure/classification']],
+    '2026-10-07':[['13:15','14:00','analytical','Analytical: Spectrochemical analysis'],['18:00','18:45','biochem','Biochemistry: Amino acids — structure/classification']],
+    '2026-10-08':[['17:15','18:00','analytical','Analytical: Spectrochemical problem set'],['18:15','18:45','public','Public Health: Epidemiology I']],
+    '2026-10-09':[['13:30','14:15','anatomy','Anatomy: Endocrine system & metabolism'],['17:30','18:00','ai','AI Awareness: Building AI projects']],
+    '2026-10-10':[['11:00','12:00','analytical','Analytical: Week 3 questions'],['13:00','14:00','micro','Microbiology: Bacteria recall'],['15:00','15:45','biochem','Biochemistry: Amino acids recall'],['16:00','16:45','anatomy','Anatomy: endocrine recall']],
+    '2026-10-11':[['12:00','12:30','history','Atatürk: Week 3 recall'],['12:45','13:15','pharmacy','Pharmacy Practice: Prescription recall'],['13:30','14:00','public','Public Health: Epidemiology I recall']],
+    '2026-10-13':[['10:30','11:00','pharmacy','Pharmacy Practice: Rational use of drugs'],['18:00','18:45','micro','Microbiology: Fungi & viruses']],
+    '2026-10-14':[['13:15','14:00','analytical','Analytical: Analytical separations'],['18:00','18:45','biochem','Biochemistry: Proteins I']],
+    '2026-10-15':[['17:15','18:00','analytical','Analytical: Separation methods — questions'],['18:15','18:45','public','Public Health: Epidemiology II']],
+    '2026-10-16':[['13:30','14:15','anatomy','Anatomy: Nervous system I'],['17:30','18:00','ai','AI Awareness: Building AI in organizations']],
+    '2026-10-17':[['11:00','12:00','analytical','Analytical: Week 4 retrieval'],['13:00','14:00','micro','Microbiology: Fungi/viruses recall'],['15:00','15:45','biochem','Biochemistry: Proteins I recall'],['16:00','16:45','anatomy','Anatomy: nervous system I recall']],
+    '2026-10-18':[['12:00','12:30','history','Atatürk: Week 4 recall'],['12:45','13:15','pharmacy','Pharmacy Practice: Rational use recall'],['13:30','14:00','public','Public Health: Epidemiology II recall']],
+    '2026-10-20':[['10:30','11:00','pharmacy','Pharmacy Practice: Irrational use of drugs'],['18:00','18:45','micro','Microbiology: Parasites + diseases']],
+    '2026-10-21':[['13:15','14:00','analytical','Analytical: Chromatographic separations'],['18:00','18:45','biochem','Biochemistry: Proteins II + structure/function']],
+    '2026-10-22':[['17:15','18:00','analytical','Analytical: Chromatography questions'],['18:15','18:45','public','Public Health: Maternal/child health & family planning']],
+    '2026-10-23':[['13:30','14:15','anatomy','Anatomy: Urinary system'],['17:30','18:00','ai','AI Awareness: Generative AI introduction']],
+    '2026-10-24':[['11:00','12:00','analytical','Analytical: Week 5 questions'],['13:00','14:00','micro','Microbiology: Parasites recall'],['15:00','15:45','biochem','Biochemistry: Proteins II recall'],['16:00','16:45','anatomy','Anatomy: urinary system recall']],
+    '2026-10-25':[['12:00','12:30','history','Atatürk: Week 5 recall'],['12:45','13:15','pharmacy','Pharmacy Practice: Irrational use recall'],['13:30','14:00','public','Public Health: maternal/child health recall']],
+    '2026-10-27':[['10:30','11:00','pharmacy','Pharmacy Practice: pharmacist role in rational use'],['18:00','19:00','micro','Microbiology: cumulative recall Weeks 1–5']],
+    '2026-10-28':[['13:15','14:15','analytical','Analytical: cumulative problem set Weeks 1–5'],['18:30','19:15','biochem','Biochemistry: cumulative recall Weeks 1–5']],
+    '2026-10-29':[['17:15','18:15','analytical','Analytical: timed questions + error log'],['18:30','19:00','public','Public Health: cumulative epidemiology recall']],
+    '2026-10-30':[['13:30','14:30','anatomy','Anatomy: cumulative diagram recall Weeks 1–5'],['17:30','18:00','ai','AI Awareness: cumulative Weeks 1–5 recall']],
+    '2026-10-31':[['11:00','12:15','analytical','Analytical: midterm practice set'],['13:15','14:15','micro','Microbiology: midterm practice recall'],['15:15','16:00','biochem','Biochemistry: practice questions'],['16:15','17:00','anatomy','Anatomy: midterm recall']],
+    '2026-11-01':[['12:00','12:45','history','Atatürk: cumulative recall'],['13:00','13:45','pharmacy','Pharmacy Practice: cumulative recall'],['14:00','14:45','public','Public Health: cumulative recall']],
+    '2026-11-03':[['10:30','11:15','pharmacy','Pharmacy Practice: full midterm recall'],['18:00','19:00','micro','Microbiology: full midterm recall + weak cards']],
+    '2026-11-04':[['13:15','14:30','analytical','Analytical: full midterm problem set'],['18:45','19:30','biochem','Biochemistry: full midterm recall + weak areas']],
+    '2026-11-05':[['17:15','18:30','analytical','Analytical: error log + formulas/concepts'],['18:45','19:30','public','Public Health: full recall']],
+    '2026-11-06':[['13:30','14:45','anatomy','Anatomy: full diagram recall + weak areas'],['17:30','18:00','ai','AI Awareness: full midterm recall']],
+    '2026-11-07':[['11:00','12:15','analytical','Analytical: final mixed practice'],['13:15','14:15','micro','Microbiology: final mixed recall'],['15:15','16:00','biochem','Biochemistry: final mixed questions'],['16:15','17:00','anatomy','Anatomy: final mixed recall']],
+    '2026-11-08':[['12:00','12:30','history','Atatürk: final recall'],['12:45','13:15','pharmacy','Pharmacy Practice: final recall'],['13:30','14:00','public','Public Health: final recall']]
+  };
+  Object.entries(weeks).forEach(([d,a])=>add(d,a));
+  function seed(){const s=read();if(!Array.isArray(s.studyPlan)||s.studyPlanVersion!=='2026-midterm-v1'){s.studyPlan=plans;s.studyPlanVersion='2026-midterm-v1';write(s)}}
+  function todayPlan(){return plans.filter(x=>x.date===key(new Date()))}
+  function injectStyle(){if(document.getElementById('elif-study-plan-style'))return;const st=document.createElement('style');st.id='elif-study-plan-style';st.textContent=`.elif-study-plan{margin-top:14px;padding:20px;background:var(--panel,#111);border:1px solid var(--line,#262126);border-radius:16px}.study-plan-row{display:grid;grid-template-columns:72px 34px 1fr auto;gap:10px;align-items:center;padding:13px 0;border-top:1px solid var(--line,#262126)}.study-plan-row:first-of-type{border-top:0}.study-plan-time{display:flex;flex-direction:column;font-family:DM Mono,monospace}.study-plan-time b{font-size:14px}.study-plan-time span{font-size:11px;color:var(--muted)}.study-plan-icon{font-size:21px}.study-plan-copy{display:flex;flex-direction:column;gap:3px;min-width:0}.study-plan-copy b{font-size:13px}.study-plan-copy span{font-size:12px;color:var(--muted)}.study-plan-copy small{font-size:11px;color:var(--pink)}.study-plan-row button{white-space:nowrap}.study-plan-note{font-size:12px;color:var(--muted);margin:12px 0 0}.elif-plan-calendar{font-size:11px;color:var(--pink);margin-top:5px}`;document.head.appendChild(st)}
+  function renderPlan(){const v=root();if(!v||v.dataset.page!=='study')return;const anchor=v.querySelector('.study-page .viewhead');if(!anchor||v.querySelector('.elif-study-plan'))return;const box=document.createElement('div');box.className='elif-study-plan';const s=read(),sessions=s.studySessions||[];box.innerHTML=`<div class="section-title"><span>Today's plan</span><small>${todayPlan().length} time blocks</small></div>${todayPlan().map(p=>{const sub=SUBJECTS[p.subject]||['📚','Study'];const done=sessions.filter(x=>x.planId===p.id|| (x.date===p.date&&x.title===p.title)).reduce((n,x)=>n+Number(x.minutes||0),0);return `<div class="study-plan-row"><div class="study-plan-time"><b>${p.start}</b><span>${p.end}</span></div><div class="study-plan-icon">${sub[0]}</div><div class="study-plan-copy"><b>${sub[1]}</b><span>${p.title}</span>${done?`<small>${done} min logged</small>`:''}</div><button class="ghost" data-plan-start="${p.id}" type="button">${done?'again':'start'}</button></div>`}).join('')||'<div class="empty-state">No study block planned for today.</div>'}<p class="study-plan-note">Use the timer for each block. Actual minutes will appear in Study and Calendar.</p>`;anchor.insertAdjacentElement('afterend',box)}
+  function startPlan(id){const p=plans.find(x=>x.id===id);if(!p)return;try{localStorage.setItem('elif-os-active-study-plan',JSON.stringify(p))}catch{};if(window.ELIFStudyEnhancement?.start){window.ELIFStudyEnhancement.start()}else{alert('Open Study timer first.')}}
+  function injectCalendarPlan(){const v=root();if(!v||v.dataset.page!=='calendar')return;const selected=v.querySelector('[data-cal-day].selected')?.dataset.calDay;if(!selected)return;const existing=v.querySelector('.elif-calendar-study-plan');if(existing)existing.remove();const ps=plans.filter(x=>x.date===selected);if(!ps.length)return;const box=document.createElement('div');box.className='panel elif-calendar-study-plan';box.style.marginTop='14px';box.innerHTML=`<div class="section-title"><span>Planned study</span><small>${ps.length} time blocks</small></div>${ps.map(p=>{const sub=SUBJECTS[p.subject]||['📚','Study'];return `<div class="row" style="padding:10px 0;border-top:1px solid var(--line,#262126)"><time style="width:90px;color:var(--pink);font-family:DM Mono,monospace">${p.start}–${p.end}</time><span class="grow"><b>${sub[0]} ${sub[1]}</b><br><small style="color:var(--muted)">${p.title}</small></span></div>`}).join('')}`;const panels=v.querySelectorAll('.panel');const target=panels[panels.length-1];if(target)target.insertAdjacentElement('afterend',box)}
+  function inject(){seed();injectStyle();renderPlan();injectCalendarPlan()}
+  document.addEventListener('click',e=>{const b=e.target.closest?.('[data-plan-start]');if(b){e.preventDefault();e.stopImmediatePropagation();startPlan(b.dataset.planStart);return}const p=e.target.closest?.('button[data-page="study"]');if(p||e.target.closest?.('[data-cal-day],[data-cal-prev],[data-cal-next],[data-cal-today]'))setTimeout(inject,30)},true);
+  window.addEventListener('load',()=>setTimeout(inject,100));
+  window.ELIFStudyPlan={plans,seed,inject};
+})();
